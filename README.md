@@ -49,7 +49,9 @@ lune main
     },
     "TrackLive": true,
     "ZChannels": [
-        "zintegr
+        "zintegration",
+        "zcanary",
+        "znext"
     ]
 }
 ```
