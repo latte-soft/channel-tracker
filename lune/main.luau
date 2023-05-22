@@ -286,7 +286,7 @@ for _, ChannelName in ZChannels do
 end
 
 repeat
-    task.wait()
+    task.wait(0.5)
 until EveryThreadInTableIsDead(InitCheckThreads)
 
 -- Now we'll calculate and create how many threads w/ how many ZChannels there are
