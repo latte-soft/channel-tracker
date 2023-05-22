@@ -166,7 +166,10 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                 end
     
                 -- The "diff" embedded in the Discord Webhook embed
-                local Diff = `+ {VersionHash} ({RobloxVersion})`
+                local Diff = `+ {VersionHash}`
+                if RobloxVersion then
+                    Diff ..= ` ({RobloxVersion})`
+                end
                 if OldVersionHash then
                     local BeforeDiffLine = `- {OldVersionHash}`
                     if OldRobloxVersion then
