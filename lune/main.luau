@@ -150,7 +150,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                 unpack(string.split(OldVersionFile, "\n"))
             else
                 nil, nil
-    
+
             -- If this version is being caught for the first time or the version is different than what we know..
             if not OldVersionFile or VersionHash ~= OldVersionHash then
                 local LastModifiedHeader = Response.headers["last-modified"]
@@ -209,7 +209,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                 -- Add the old version hash to PastVersions, and re-write to file
                 table.insert(PastVersions, OldVersionHash)
                 fs.writeFile(BinaryTypePath .. `PastVersions.txt`, table.concat(PastVersions, "\n"))
-    
+
                 local BulletPoints = {`• Binary Hash: **\`{VersionHash}\`**`}
                 if RobloxVersion then
                     table.insert(BulletPoints, `• Roblox Version: **\`{RobloxVersion}\`**`)
