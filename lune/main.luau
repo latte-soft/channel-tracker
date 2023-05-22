@@ -274,6 +274,7 @@ WebhookQueue.Start()
 -- caught up with the current 'state' of each channel
 -- FYI, the 2nd `false` arg here tells CheckChannel to not post to any
 -- webhooks, soley for this
+--[[
 print("* Checking initial state of each channel (this could take a min)")
 if Config.TrackLive then
     CheckChannel("LIVE", false)
@@ -288,20 +289,20 @@ end
 repeat
     task.wait(0.5)
 until EveryThreadInTableIsDead(InitCheckThreads)
+]]
 
 -- Now we'll calculate and create how many threads w/ how many ZChannels there are
 -- We'll also create an extra thread for LIVE specifically, if tracking it is enabled
-local ThreadsToCreate = math.floor(#ZChannels / Config.Workers.Amount)
-local ChannelsPerThread = math.floor(#ZChannels / ThreadsToCreate)
+local ChannelsPerThread = math.floor(#ZChannels / Config.Workers.Amount)
 local RemainingChannels = #ZChannels % Config.Workers.Amount
 
 local ChannelGroups = {}
 local ZChannelListIndex = 1
 
-print(`* Creating {ThreadsToCreate} workers, with {ChannelsPerThread} channels per worker ({RemainingChannels} remainders)`)
+print(`* Creating {Config.Workers.Amount} workers, with {ChannelsPerThread} channels per worker ({RemainingChannels} remainders)`)
 
 -- Go through the initial list (without remainders)
-for GroupIndex = 1, ThreadsToCreate do
+for GroupIndex = 1, Config.Workers.Amount do
     local ChannelGroup = {}
 
     for _ = 1, ChannelsPerThread do
@@ -339,5 +340,5 @@ for _, ChannelGroup in ChannelGroups do
     end)
 end
 
-print(`* Now running {ThreadsToCreate} workers, with a check-interval of {Config.Workers.CheckInterval}`)
-print(`* Each z-channel will be checked every {ChannelsPerThread * Config.Workers.CheckInterval} (seconds)`)
+print(`* Now running {Config.Workers.Amount} workers, with a check-interval of {Config.Workers.CheckInterval}`)
+print(`* Each z-channel will be checked every ~{ChannelsPerThread * Config.Workers.CheckInterval} seconds`)
