@@ -94,20 +94,22 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
         embeds = {},
     }
 
-    -- I reversed these so it'd be reverse in the traversal process, lol. Talk about
-    -- being lazy!
+    -- This is structred in this way to be ordered..
     local Responses = {
-        MacStudio = net.request(ChannelPath .. "mac/versionStudio"),
-        MacPlayer = net.request(ChannelPath .. "mac/version"),
-        WindowsStudio64 = net.request(ChannelPath .. "versionQTStudio"),
-        WindowsPlayer = net.request(ChannelPath .. "version"),
+        {"WindowsPlayer", net.request(ChannelPath .. "version")},
+        {"WindowsStudio64", net.request(ChannelPath .. "versionQTStudio")},
+        {"MacPlayer", net.request(ChannelPath .. "mac/version")},
+        {"MacStudio", net.request(ChannelPath .. "mac/versionStudio")},
     }
 
     -- Automatically ensure the folder for said BinaryType in the channel exists, as
     -- this will be the same throughout
     local GoodResponses = {}
 
-    for BinaryType, Response in Responses do
+    for _, ResponseTree in Responses do
+        local BinaryType: string = ResponseTree[1]
+        local Response: net.FetchResponse = ResponseTree[2]
+
         local StatusCodeIsGood = Response.statusCode == 200
         GoodResponses[BinaryType] = StatusCodeIsGood
 
@@ -131,7 +133,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
     
             -- If this version is being caught for the first time or the version is different than what we know..
             if not OldVersionFile or VersionHash ~= OldVersionHash then
-                local LastModifiedHeader = Responses.WindowsPlayer.headers["last-modified"]
+                local LastModifiedHeader = Response.headers["last-modified"]
                 local DeploymentTime = if LastModifiedHeader then GetTimestampFromLastModified(LastModifiedHeader) else nil
 
                 -- Does *not* support WindowsStudio64. And yes, there are SLIGHT differences to each
