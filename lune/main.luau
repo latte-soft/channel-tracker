@@ -62,6 +62,16 @@ local function SafeReadFile(filePath: string): string?
     return nil
 end
 
+local function EveryThreadInTableIsDead(threadTable: {thread})
+    for _, Thread in threadTable do
+        if coroutine.status(Thread) ~= "dead" then
+            return false
+        end
+    end
+
+    return true
+end
+
 -- Used in worker threads individually
 local function CheckChannel(channelName: string, postToWebhook: boolean?)
     -- This is used in the inital run loop for each worker, so that we don't log any
@@ -268,10 +278,16 @@ print("* Checking initial state of each channel (this could take a min)")
 if Config.TrackLive then
     CheckChannel("LIVE", false)
 end
+
+local InitCheckThreads = {}
 for _, ChannelName in ZChannels do
-    task.spawn(CheckChannel, ChannelName, false)
+    table.insert(InitCheckThreads, task.spawn(CheckChannel, ChannelName, false))
     task.wait(0.5)
 end
+
+repeat
+    task.wait()
+until EveryThreadInTableIsDead(InitCheckThreads)
 
 -- Now we'll calculate and create how many threads w/ how many ZChannels there are
 -- We'll also create an extra thread for LIVE specifically, if tracking it is enabled
