@@ -1,0 +1,7 @@
+{
+    "luau-lsp.sourcemap.enabled": false,
+    "luau-lsp.require.mode": "relativeToFile",
+    "markdownlint.config": {
+        "MD033": false
+    },
+}
