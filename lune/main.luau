@@ -274,7 +274,6 @@ WebhookQueue.Start()
 -- caught up with the current 'state' of each channel
 -- FYI, the 2nd `false` arg here tells CheckChannel to not post to any
 -- webhooks, soley for this
---[[
 print("* Checking initial state of each channel (this could take a min)")
 if Config.TrackLive then
     CheckChannel("LIVE", false)
@@ -289,7 +288,6 @@ end
 repeat
     task.wait(0.5)
 until EveryThreadInTableIsDead(InitCheckThreads)
-]]
 
 -- Now we'll calculate and create how many threads w/ how many ZChannels there are
 -- We'll also create an extra thread for LIVE specifically, if tracking it is enabled
