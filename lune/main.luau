@@ -192,7 +192,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                     table.insert(BulletPoints, `• Roblox Version: **\`{RobloxVersion}\`**`)
                 end
                 if DeploymentTime then
-                    table.insert(BulletPoints, `• Deployment Time: <t:{DeploymentTime}:f>`)
+                    table.insert(BulletPoints, `• Deployment Time: <t:{DeploymentTime}:D> @ <t:{DeploymentTime}:T>`)
                 end
     
                 -- Various BinaryType-specific config for the final embed
