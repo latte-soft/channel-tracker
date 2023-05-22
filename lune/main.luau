@@ -184,7 +184,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                         end
                     end
                 end
-    
+
                 -- The "diff" embedded in the Discord Webhook embed
                 local Diff = `+ {VersionHash}`
                 if RobloxVersion then
@@ -196,9 +196,9 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                         BeforeDiffLine ..= ` {OldRobloxVersion}`
                     end
     
-                    Diff = BeforeDiffLine .. Diff
+                    Diff = BeforeDiffLine .. "\n" .. Diff
                 end
-    
+
                 -- Checking if this a new deployment, or a "revert"
                 local PastVersionsFile = SafeReadFile(BinaryTypePath .. "PastVersions.txt")
                 local PastVersions = if PastVersionsFile then string.split(PastVersionsFile, "\n") else {}
