@@ -1,3 +1,5 @@
+-- GPLv3 | Copyright (C) 2023 Latte Softworks <latte.to>
+
 export type WebhookObject = {[string]: any}
 
 local net = require("@lune/net")

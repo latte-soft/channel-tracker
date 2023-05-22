@@ -1,3 +1,5 @@
+-- GPLv3 | Copyright (C) 2023 Latte Softworks <latte.to>
+
 export type Config = {
     Workers: {
         Amount: number,

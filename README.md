@@ -26,7 +26,7 @@ lune main
 
 ### `config.json` File Template
 
-*(The channels in `"ZChannels"` are just a few examples, as to not clutter the template)*
+*(The channels in `"ZChannels"` are just a few examples, as to not clutter the template. Every entry in this dict is currently required)*
 
 ```json
 {
@@ -54,4 +54,27 @@ lune main
         "znext"
     ]
 }
+```
+
+___
+
+## License
+
+A copy of the GPLv3 is located in this repository @ [LICENSE.txt](LICENSE.txt). If you're unable to access this file, see the notice below:
+
+```txt
+Copyright (C) 2023 Latte Softworks <latte.to>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ```

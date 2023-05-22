@@ -1,3 +1,5 @@
+-- GPLv3 | Copyright (C) 2023 Latte Softworks <latte.to>
+
 -- Month "bindings" for os.time input
 local MonthBindings: {[string]: number} = {
     Jan = 1,

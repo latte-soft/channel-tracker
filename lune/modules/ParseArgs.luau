@@ -1,3 +1,5 @@
+-- GPLv3 | Copyright (C) 2023 Latte Softworks <latte.to>
+
 type OptionsTable = {[string]: string | number | boolean}
 
 local function ParseArgs(args: {string}, optionsTable: OptionsTable): OptionsTable
