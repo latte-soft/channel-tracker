@@ -1,6 +1,7 @@
 local fs = require("@lune/fs")
 local process = require("@lune/process")
 local net = require("@lune/net")
+local task = require("@lune/task")
 local serde = require("@lune/serde")
 
 assert(
