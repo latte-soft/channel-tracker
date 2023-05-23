@@ -71,6 +71,22 @@ local function ParseRobloxVersion(version: string): string?
     return `{Major}.{Patch}`
 end
 
+-- Lol..
+local function GetLatestRobloxVersionForBinaryType(binaryType: string, deployHistoryData: string): string?
+    local RobloxVersions = {}
+    for RobloxVersionString in string.gmatch(deployHistoryData, `{binaryType}.+file version: %d+, %d+, %d+, (%d+)`) do
+        table.insert(RobloxVersions, RobloxVersionString)
+    end
+
+    local LastVersion = RobloxVersions[#RobloxVersions]
+    if LastVersion then
+        return ParseRobloxVersion(LastVersion)
+    end
+
+    -- :(
+    return
+end
+
 local function SafeReadFile(filePath: string): string?
     if fs.isFile(filePath) then
         local Success, Contents = pcall(fs.readFile, filePath)
@@ -176,6 +192,12 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                         if VersionString then
                             RobloxVersion = ParseRobloxVersion(VersionString)
                         end
+                    end
+                elseif BinaryType == "WindowsStudio64" then
+                    local DeployHistoryResponse = net.request(ChannelPath .. "DeployHistory.txt")
+                    if DeployHistoryResponse.statusCode == 200 then
+                        -- Might still be nil!
+                        RobloxVersion = GetLatestRobloxVersionForBinaryType("Studio64", DeployHistoryResponse.body)
                     end
                 elseif BinaryType == "MacPlayer" then
                     local RobloxVersionResponse = net.request(ChannelPath .. `mac/{VersionHash}-RobloxVersion.txt`)
