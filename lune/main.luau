@@ -146,10 +146,14 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
             local VersionHash = Response.body
 
             local OldVersionFile = SafeReadFile(BinaryTypePath .. "Version.txt")
-            local OldVersionHash, OldRobloxVersion = if OldVersionFile then
-                unpack(string.split(OldVersionFile, "\n"))
-            else
-                nil, nil
+            local OldVersionHash, OldRobloxVersion do
+                local SplitOldVersionFile = string.split(OldVersionFile, "\n")
+
+                OldVersionHash = SplitOldVersionFile[1]
+                OldRobloxVersion = SplitOldVersionFile[2]
+            end
+            
+            print(`{BinaryType}@{channelName} | {OldVersionHash}, {OldRobloxVersion}`)
 
             -- If this version is being caught for the first time or the version is different than what we know..
             if not OldVersionFile or VersionHash ~= OldVersionHash then
@@ -193,7 +197,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                 if OldVersionHash then
                     local BeforeDiffLine = `- {OldVersionHash}`
                     if OldRobloxVersion then
-                        BeforeDiffLine ..= ` {OldRobloxVersion}`
+                        BeforeDiffLine ..= ` ({OldRobloxVersion})`
                     end
     
                     Diff = BeforeDiffLine .. "\n" .. Diff
@@ -207,8 +211,10 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                 local DeploymentType = if table.find(PastVersions, VersionHash) then "Revert" else "New"
     
                 -- Add the old version hash to PastVersions, and re-write to file
-                table.insert(PastVersions, OldVersionHash)
-                fs.writeFile(BinaryTypePath .. `PastVersions.txt`, table.concat(PastVersions, "\n"))
+                if OldVersionHash then
+                    table.insert(PastVersions, OldVersionHash)
+                    fs.writeFile(BinaryTypePath .. `PastVersions.txt`, table.concat(PastVersions, "\n"))
+                end
 
                 local BulletPoints = {`• Binary Hash: **\`{VersionHash}\`**`}
                 if RobloxVersion then
@@ -233,12 +239,24 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
 
                 print(`[+] {DeploymentType} {BinaryType}@{channelName}\n    * Binary Hash: {VersionHash}\n    * Roblox Version: {RobloxVersion}\n    * Deployment Time: {LastModifiedHeader}`)
 
-                table.insert(WebhookObject.embeds, {
+                local EmbedObject = {
                     title = `[{DeploymentType}] {PlatformEmoji} {BinaryType}@{channelName}`,
                     description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
                     url = EmbedUrl,
                     color = 0x518dc9,
-                })
+                }
+
+                -- Only for WindowsPlayer@LIVE
+                if channelName == "LIVE" and BinaryType == "WindowsPlayer" then
+                    EmbedObject.footer = {
+                        text = "⚠️ This version may not yet be \"active\", meaning most users shouldn't receive this update until later, which could take any amount of time. (Sometimes a few hours, or even up to a day!)"
+                    }
+
+                    -- And also..
+                    WebhookObject.content = `<@&{Config.Discord.LiveUpdatePingRoleId}>`
+                end
+
+                table.insert(WebhookObject.embeds, EmbedObject)
     
                 -- Now write new version info to file
                 local NewVersionInfoToWrite = VersionHash
@@ -253,37 +271,6 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
 
     -- Now, we'll finalize and post to the webhook, if applicable
     if postToWebhook and #WebhookObject.embeds >= 1 then
-        local LastEmbed = {
-            fields = {},
-            footer = {
-                text = "Roblox Channel Tracker - Latte Softworks",
-            },
-            color = 0x518dc9,
-        }
-
-        -- Only for WindowsPlayer@LIVE
-        if channelName == "LIVE" and GoodResponses.WindowsPlayer then
-            LastEmbed.description = ":warning: This version may not yet be \"active\", meaning most users shouldn't receive this update until later, which could take any amount of time. (Sometimes a few hours, or even up to a day!)"
-
-            -- And also..
-            WebhookObject.content = `<@&{Config.Discord.LiveUpdatePingRoleId}>`
-        end
-
-        local LinkBulletPoints = {}
-        if GoodResponses.WindowsPlayer or GoodResponses.WindowsStudio64 then
-            table.insert(LinkBulletPoints, `• [DeployHistory.txt (\`{channelName}\`)]({ChannelPath}DeployHistory.txt)`)
-        end
-        if GoodResponses.MacPlayer or GoodResponses.MacStudio then
-            table.insert(LinkBulletPoints, `• [Mac DeployHistory.txt (\`{channelName}\`)]({ChannelPath}mac/DeployHistory.txt)`)
-        end
-
-        table.insert(LastEmbed.fields, {
-            name = "Additional Links",
-            value = table.concat(LinkBulletPoints, "\n")
-        })
-
-        table.insert(WebhookObject.embeds, LastEmbed)
-
         local WebhookArray = if channelName == "LIVE" then Config.Discord.Webhooks.Live else Config.Discord.Webhooks.ZChannels
         for _, WebhookUrl in WebhookArray do
             WebhookQueue.Add(WebhookUrl, WebhookObject)
@@ -364,4 +351,4 @@ for _, ChannelGroup in ChannelGroups do
 end
 
 print(`* Now running {Config.Workers.Amount} workers, with a check-interval of {Config.Workers.CheckInterval}`)
-print(`* Each z-channel will be checked every ~{ChannelsPerThread * Config.Workers.CheckInterval} seconds`)
+print(`* Each z-channel will be checked at an absolute MINIMUM of every ~{ChannelsPerThread * Config.Workers.CheckInterval} seconds`)
