@@ -47,7 +47,7 @@ assert(fs.isFile(ConfigFile), `Given config file path "{ConfigFile}" not found, 
 local Config: Types.Config = serde.decode("json", fs.readFile(ConfigFile))
 
 -- Make sure all z-channels in the config are set to lowercase for s3
-local ZChannels = Config.ZChannels
+local ZChannels = Config.ZChannels or {}
 
 print(`* Checking ({#ZChannels}) z-channel names..`)
 for Index, ChannelName in ZChannels do
@@ -109,10 +109,16 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
 
     -- We'll use this throughout each specific BinaryType check to add embeds etc
     local WebhookObject: WebhookQueue.WebhookObject = {
-        username = Config.Discord.Username,
-        avatar_url = Config.Discord.AvatarUrl,
         embeds = {},
     }
+
+    -- Optional Discord cfgs
+    if Config.Discord.Username then
+        WebhookObject.username = Config.Discord.Username
+    end
+    if Config.Discord.AvatarUrl then
+        WebhookObject.avatar_url = Config.Discord.AvatarUrl
+    end
 
     -- This is structred in this way to be ordered..
     local Responses = {
@@ -224,16 +230,21 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                     table.insert(BulletPoints, `• Deployment Time: <t:{DeploymentTime}:D> @ <t:{DeploymentTime}:T>`)
                 end
     
-                -- Various BinaryType-specific config for the final embed
-                local PlatformEmoji = if BinaryType == "WindowsPlayer" or BinaryType == "WindowsStudio64" then
-                    Config.Discord.PlatformEmojis.Windows
-                else -- MacPlayer/MacStudio
-                    Config.Discord.PlatformEmojis.MacOs
+                -- Yeah, this is hacky, what a price to pay for good formatting!
+                local PlatformEmoji = if Config.Discord.PlatformEmojis then
+                    if BinaryType == "WindowsPlayer" or BinaryType == "WindowsStudio64" and Config.Discord.PlatformEmojis.Windows then
+                        ` {Config.Discord.PlatformEmojis.Windows} `
+                    elseif BinaryType == "MacPlayer" or BinaryType == "MacStudio" and Config.Discord.PlatformEmojis.MacOs then
+                        ` {Config.Discord.PlatformEmojis.MacOs} `
+                    else
+                        ""
+                else
+                    ""
 
                 print(`[+] {DeploymentType} {BinaryType}@{channelName}\n    * Binary Hash: {VersionHash}\n    * Roblox Version: {RobloxVersion}\n    * Deployment Time: {LastModifiedHeader}`)
 
                 local EmbedObject = {
-                    title = `[{DeploymentType}] {PlatformEmoji} {BinaryType}@{channelName}`,
+                    title = `[{DeploymentType}]{PlatformEmoji}{BinaryType}@{channelName}`,
                     description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
                     url = ChannelPath .. "DeployHistory.txt",
                     color = 0x518dc9,
@@ -246,7 +257,9 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                     }
 
                     -- And also..
-                    WebhookObject.content = `<@&{Config.Discord.LiveUpdatePingRoleId}>`
+                    if Config.Discord.LiveUpdatePingRoleId then
+                        WebhookObject.content = `<@&{Config.Discord.LiveUpdatePingRoleId}>`
+                    end
                 end
 
                 table.insert(WebhookObject.embeds, EmbedObject)

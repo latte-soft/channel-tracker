@@ -26,7 +26,7 @@ lune main
 
 ### `config.json` File Template
 
-*(The channels in `"ZChannels"` are just a few examples, as to not clutter the template. Every entry in this dict is currently required)*
+*(The channels in `"ZChannels"` are just a few examples, as to not clutter the template.*
 
 ```json
 {
@@ -37,7 +37,6 @@ lune main
     "Discord": {
         "Username": "AvLab",
         "AvatarUrl": "https://media.discordapp.net/attachments/962055279099383829/1109605825506459808/AvLab.png",
-        "LiveUpdatePingRoleId": "1109607945152503838",
         "PlatformEmojis": {
             "Windows": "<:windows:1109709970917826580>",
             "MacOs": "<:osx:1109720452772925522>"
@@ -53,6 +52,20 @@ lune main
         "zcanary",
         "znext"
     ]
+}
+```
+
+*(Here's what's actually fully required in the config, as an example)*
+
+```json
+{
+    "Workers": {
+        "Amount": 1,
+        "CheckInterval": 0
+    },
+    "Discord": {
+        "Webhooks": {}
+    }
 }
 ```
 
