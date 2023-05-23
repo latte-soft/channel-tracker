@@ -23,11 +23,6 @@ local net = require("@lune/net")
 local task = require("@lune/task")
 local serde = require("@lune/serde")
 
-assert(
-    table.find({"linux", "macos", "windows"}, process.os) ~= nil,
-    `[!] Unsupported operating system "{process.os}"; expected "linux", "macos", or "windows"\nExitting..`
-)
-
 local Types = require("modules/Types")
 
 local ParseArgs = require("modules/ParseArgs")
