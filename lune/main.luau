@@ -152,8 +152,6 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                 OldVersionHash = SplitOldVersionFile[1]
                 OldRobloxVersion = SplitOldVersionFile[2]
             end
-            
-            print(`{BinaryType}@{channelName} | {OldVersionHash}, {OldRobloxVersion}`)
 
             -- If this version is being caught for the first time or the version is different than what we know..
             if not OldVersionFile or VersionHash ~= OldVersionHash then
