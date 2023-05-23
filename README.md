@@ -2,6 +2,8 @@
 
 A basic Roblox channel deployment tracker that utilizes [Discord Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) for notifying changes.
 
+*This tracker is also hosted officially in the [Latte Softworks Discord Server](https://latte.do) :)*
+
 ## Setup
 
 * Clone/[Download](https://github.com/latte-soft/channel-tracker/zipball/main) the Repository
