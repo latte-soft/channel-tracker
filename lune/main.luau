@@ -365,13 +365,13 @@ for _, ChannelGroup in ChannelGroups do
         while true do
             for _, ChannelName in ChannelGroup do
                 CheckChannel(ChannelName)
-
-                -- Wait the given interval
-                task.wait(Config.Workers.CheckInterval) 
             end
+            
+            -- Wait the given interval at the end of the cycle..
+            task.wait(Config.Workers.CheckInterval) 
         end
     end)
 end
 
-print(`* Now running {Config.Workers.Amount} workers, with a check-interval of {Config.Workers.CheckInterval}`)
+print(`* Now running {Config.Workers.Amount} workers, with a check-interval of {Config.Workers.CheckInterval} after each cycle`)
 print(`* Each z-channel will be checked at an absolute MINIMUM of every ~{ChannelsPerThread * Config.Workers.CheckInterval} seconds`)
