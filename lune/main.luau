@@ -146,7 +146,9 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
             local VersionHash = Response.body
 
             local OldVersionFile = SafeReadFile(BinaryTypePath .. "Version.txt")
-            local OldVersionHash, OldRobloxVersion do
+
+            local OldVersionHash, OldRobloxVersion
+            if OldVersionFile then
                 local SplitOldVersionFile = string.split(OldVersionFile, "\n")
 
                 OldVersionHash = SplitOldVersionFile[1]
