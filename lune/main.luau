@@ -374,4 +374,3 @@ for _, ChannelGroup in ChannelGroups do
 end
 
 print(`* Now running {Config.Workers.Amount} workers, with a check-interval of {Config.Workers.CheckInterval} after each cycle`)
-print(`* Each z-channel will be checked at an absolute MINIMUM of every ~{ChannelsPerThread * Config.Workers.CheckInterval} seconds`)
