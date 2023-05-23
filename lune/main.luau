@@ -229,20 +229,13 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                     Config.Discord.PlatformEmojis.Windows
                 else -- MacPlayer/MacStudio
                     Config.Discord.PlatformEmojis.MacOs
-                
-                local EmbedUrl = if BinaryType == "WindowsPlayer" or BinaryType == "WindowsStudio64" then
-                        ChannelPath .. `{VersionHash}-rbxManifest.txt`
-                    elseif BinaryType == "MacPlayer" then
-                        ChannelPath .. `{VersionHash}-Roblox.dmg`
-                    else -- MacStudio
-                        ChannelPath .. `{VersionHash}-RobloxStudio.dmg`
 
                 print(`[+] {DeploymentType} {BinaryType}@{channelName}\n    * Binary Hash: {VersionHash}\n    * Roblox Version: {RobloxVersion}\n    * Deployment Time: {LastModifiedHeader}`)
 
                 local EmbedObject = {
                     title = `[{DeploymentType}] {PlatformEmoji} {BinaryType}@{channelName}`,
                     description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
-                    url = EmbedUrl,
+                    url = ChannelPath .. "DeployHistory.txt",
                     color = 0x518dc9,
                 }
 
