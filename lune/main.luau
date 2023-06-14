@@ -68,14 +68,10 @@ end
 
 -- Lol..
 local function GetLatestRobloxVersionForBinaryType(binaryType: string, deployHistoryData: string): string?
-    local RobloxVersions = {}
-    for RobloxVersionString in string.gmatch(deployHistoryData, `{binaryType}.+file version: %d+, %d+, %d+, (%d+)`) do
-        table.insert(RobloxVersions, RobloxVersionString)
-    end
+    local RobloxVersionString = string.match(deployHistoryData, `{binaryType}.+file version: %d+, %d+, %d+, (%d+)[\0-\9\11-\255]*$`)
 
-    local LastVersion = RobloxVersions[#RobloxVersions]
-    if LastVersion then
-        return ParseRobloxVersion(LastVersion)
+    if RobloxVersionString then
+        return ParseRobloxVersion(RobloxVersionString)
     end
 
     -- :(
