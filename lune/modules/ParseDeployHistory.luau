@@ -3,7 +3,7 @@
 export type Deployment = {
     DeployType: string,
     BinaryType: string,
-    BinaryHash: string,
+    VersionHash: string,
     Time: {
         Timestamp: number?,
         Formatted: string?,
@@ -27,11 +27,11 @@ end
 local function ParseDeployHistory(deployHistoryData: string): {Deployment}
     local DeploymentObjects = {}
 
-    for DeployType, BinaryType, BinaryHash, Extra in string.gmatch(deployHistoryData, "(%a+) (%w+) (version%-[%l%d]+)(.*)%.%.%.") do
+    for DeployType, BinaryType, VersionHash, Extra in string.gmatch(deployHistoryData, "(%u%l+) (%w+) (version%-[%l%d]+) ([%w/:,!#\" ]*)") do
         local Deployment: Deployment = {
             DeployType = DeployType,
             BinaryType = BinaryType,
-            BinaryHash = BinaryHash,
+            VersionHash = VersionHash,
             Time = {},
         }
 
@@ -63,9 +63,10 @@ local function ParseDeployHistory(deployHistoryData: string): {Deployment}
             Deployment.Time.Formatted = os.date("%a, %d %b %Y %H:%M:%S GMT", Timestamp)
         end
 
-        local FileVersionString = string.match(Extra, "file version: (%d+,? ?%d*,? ?%d*,? ?%d*)")
+        -- bro they literally spelled "file version" wrong for so long in early win/mac deployhistory
+        local FileVersionString = string.match(Extra, "file vers?ion: (%d+,? ?%d*,? ?%d*,? ?%d*)")
         if FileVersionString then
-            Deployment.RobloxVersion = string.gsub(FileVersionString, ", ", ".")
+            Deployment.RobloxVersion = string.gsub(FileVersionString, ", *", ".")
         end
 
         local GitHash = string.match(Extra, "git hash: ([%l%d]+)")
