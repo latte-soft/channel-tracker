@@ -23,12 +23,13 @@ local net = require("@lune/net")
 local task = require("@lune/task")
 local serde = require("@lune/serde")
 
-local Types = require("modules/Types")
+local ExtraTypes = require("modules/ExtraTypes")
 
 local ParseArgs = require("modules/ParseArgs")
 local EnsureFileTree = require("modules/EnsureFileTree")
 local WebhookQueue = require("modules/WebhookQueue")
 local GetTimestampFromLastModified = require("modules/GetTimestampFromLastModified")
+local ParseDeployHistory = require("modules/ParseDeployHistory")
 
 -- Input args
 local Args = ParseArgs(process.args, {
@@ -39,7 +40,7 @@ local ConfigFile = Args["config-file"]
 
 -- Set global config at init..
 assert(fs.isFile(ConfigFile), `Given config file path "{ConfigFile}" not found, did you make a typo?`)
-local Config: Types.Config = serde.decode("json", fs.readFile(ConfigFile))
+local Config: ExtraTypes.Config = serde.decode("json", fs.readFile(ConfigFile))
 
 -- Make sure all z-channels in the config are set to lowercase for s3
 local ZChannels = Config.ZChannels or {}
@@ -99,6 +100,23 @@ local function EveryThreadInTableIsDead(threadTable: {thread})
     return true
 end
 
+local function ConstructDiff(versionHash1: string, robloxVersion1: string?, versionHash2: string, robloxVersion2: string?): string
+    local Diff = `+ {versionHash1}`
+    if robloxVersion1 then
+        Diff ..= ` ({robloxVersion1})`
+    end
+    if versionHash2 then
+        local BeforeDiffLine = `- {versionHash2}`
+        if robloxVersion2 then
+            BeforeDiffLine ..= ` ({robloxVersion2})`
+        end
+
+        Diff = BeforeDiffLine .. "\n" .. Diff
+    end
+
+    return Diff
+end
+
 -- Used in worker threads individually
 local function CheckChannel(channelName: string, postToWebhook: boolean?)
     -- This is used in the inital run loop for each worker, so that we don't log any
@@ -135,157 +153,143 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
         {"MacStudio", net.request(ChannelPath .. "mac/versionStudio")},
     }
 
-    -- Automatically ensure the folder for said BinaryType in the channel exists, as
-    -- this will be the same throughout
-    local GoodResponses = {}
-
     for _, ResponseTree in Responses do
         local BinaryType: string = ResponseTree[1]
         local Response: net.FetchResponse = ResponseTree[2]
 
-        local StatusCodeIsGood = Response.statusCode == 200
-        GoodResponses[BinaryType] = StatusCodeIsGood
+        if Response.statusCode ~= 200 then
+            continue
+        end
 
-        if StatusCodeIsGood then
-            EnsureFileTree({
-                db = {
-                    [channelName] = {
-                        [BinaryType] = {}
-                    }
+        EnsureFileTree({
+            db = {
+                [channelName] = {
+                    [BinaryType] = {}
                 }
-            })
+            }
+        })
 
-            local BinaryTypePath = DbPath .. BinaryType .. "/"
-            local VersionHash = Response.body
+        local BinaryTypePath = DbPath .. BinaryType .. "/"
+        local VersionHash = Response.body
 
-            local OldVersionFile = SafeReadFile(BinaryTypePath .. "Version.txt")
+        local OldVersionFile = SafeReadFile(BinaryTypePath .. "Version.txt")
 
-            local OldVersionHash, OldRobloxVersion
-            if OldVersionFile then
-                local SplitOldVersionFile = string.split(OldVersionFile, "\n")
+        local OldVersionHash, OldRobloxVersion
+        if OldVersionFile then
+            local SplitOldVersionFile = string.split(OldVersionFile, "\n")
 
-                OldVersionHash = SplitOldVersionFile[1]
-                OldRobloxVersion = SplitOldVersionFile[2]
+            OldVersionHash = SplitOldVersionFile[1]
+            OldRobloxVersion = SplitOldVersionFile[2]
+        end
+
+        -- If this version is being caught for the first time or the version is different than what we know..
+        if OldVersionFile and VersionHash == OldVersionHash then
+            continue
+        end
+
+        local LastModifiedHeader = Response.headers["last-modified"]
+        local DeploymentTime = if LastModifiedHeader then GetTimestampFromLastModified(LastModifiedHeader) else nil
+
+        -- Does *not* support WindowsStudio64. And yes, there are SLIGHT differences to each
+        -- of these, according the the specs we've reversed
+        local RobloxVersion
+        if BinaryType == "WindowsPlayer" then
+            local RobloxVersionResponse = net.request(ChannelPath .. `{VersionHash}-RobloxVersion.txt`)
+            if RobloxVersionResponse.statusCode == 200 then
+                local VersionString = string.match(RobloxVersionResponse.body, "%d+, %d+, %d+, (%d+)")
+                if VersionString then
+                    RobloxVersion = ParseRobloxVersion(VersionString)
+                end
             end
-
-            -- If this version is being caught for the first time or the version is different than what we know..
-            if not OldVersionFile or VersionHash ~= OldVersionHash then
-                local LastModifiedHeader = Response.headers["last-modified"]
-                local DeploymentTime = if LastModifiedHeader then GetTimestampFromLastModified(LastModifiedHeader) else nil
-
-                -- Does *not* support WindowsStudio64. And yes, there are SLIGHT differences to each
-                -- of these, according the the specs we've reversed
-                local RobloxVersion
-                if BinaryType == "WindowsPlayer" then
-                    local RobloxVersionResponse = net.request(ChannelPath .. `{VersionHash}-RobloxVersion.txt`)
-                    if RobloxVersionResponse.statusCode == 200 then
-                        local VersionString = string.match(RobloxVersionResponse.body, "%d+, %d+, %d+, (%d+)")
-                        if VersionString then
-                            RobloxVersion = ParseRobloxVersion(VersionString)
-                        end
-                    end
-                elseif BinaryType == "WindowsStudio64" then
-                    local DeployHistoryResponse = net.request(ChannelPath .. "DeployHistory.txt")
-                    if DeployHistoryResponse.statusCode == 200 then
-                        -- Might still be nil!
-                        RobloxVersion = GetLatestRobloxVersionForBinaryType("Studio64", DeployHistoryResponse.body)
-                    end
-                elseif BinaryType == "MacPlayer" then
-                    local RobloxVersionResponse = net.request(ChannelPath .. `mac/{VersionHash}-RobloxVersion.txt`)
-                    if RobloxVersionResponse.statusCode == 200 then
-                        local VersionString = string.match(RobloxVersionResponse.body, "%d+")
-                        if VersionString then
-                            RobloxVersion = ParseRobloxVersion(VersionString)
-                        end
-                    end
-                elseif BinaryType == "MacStudio" then
-                    local RobloxVersionResponse = net.request(ChannelPath .. `mac/{VersionHash}-RobloxStudioVersion.txt`)
-                    if RobloxVersionResponse.statusCode == 200 then
-                        local VersionString = string.match(RobloxVersionResponse.body, "%d+")
-                        if VersionString then
-                            RobloxVersion = ParseRobloxVersion(VersionString)
-                        end
-                    end
+        elseif BinaryType == "WindowsStudio64" then
+            local DeployHistoryResponse = net.request(ChannelPath .. "DeployHistory.txt")
+            if DeployHistoryResponse.statusCode == 200 then
+                -- Might still be nil!
+                RobloxVersion = GetLatestRobloxVersionForBinaryType("Studio64", DeployHistoryResponse.body)
+            end
+        elseif BinaryType == "MacPlayer" then
+            local RobloxVersionResponse = net.request(ChannelPath .. `mac/{VersionHash}-RobloxVersion.txt`)
+            if RobloxVersionResponse.statusCode == 200 then
+                local VersionString = string.match(RobloxVersionResponse.body, "%d+")
+                if VersionString then
+                    RobloxVersion = ParseRobloxVersion(VersionString)
                 end
-
-                -- The "diff" embedded in the Discord Webhook embed
-                local Diff = `+ {VersionHash}`
-                if RobloxVersion then
-                    Diff ..= ` ({RobloxVersion})`
+            end
+        elseif BinaryType == "MacStudio" then
+            local RobloxVersionResponse = net.request(ChannelPath .. `mac/{VersionHash}-RobloxStudioVersion.txt`)
+            if RobloxVersionResponse.statusCode == 200 then
+                local VersionString = string.match(RobloxVersionResponse.body, "%d+")
+                if VersionString then
+                    RobloxVersion = ParseRobloxVersion(VersionString)
                 end
-                if OldVersionHash then
-                    local BeforeDiffLine = `- {OldVersionHash}`
-                    if OldRobloxVersion then
-                        BeforeDiffLine ..= ` ({OldRobloxVersion})`
-                    end
-    
-                    Diff = BeforeDiffLine .. "\n" .. Diff
-                end
-
-                -- Checking if this a new deployment, or a "revert"
-                local PastVersionsFile = SafeReadFile(BinaryTypePath .. "PastVersions.txt")
-                local PastVersions = if PastVersionsFile then string.split(PastVersionsFile, "\n") else {}
-    
-                -- Used in the embed
-                local DeploymentType = if table.find(PastVersions, VersionHash) then "Revert" else "New"
-    
-                -- Add the old version hash to PastVersions, and re-write to file
-                if OldVersionHash then
-                    table.insert(PastVersions, OldVersionHash)
-                    fs.writeFile(BinaryTypePath .. `PastVersions.txt`, table.concat(PastVersions, "\n"))
-                end
-
-                local BulletPoints = {`• Binary Hash: **\`{VersionHash}\`**`}
-                if RobloxVersion then
-                    table.insert(BulletPoints, `• Roblox Version: **\`{RobloxVersion}\`**`)
-                end
-                if DeploymentTime then
-                    table.insert(BulletPoints, `• Deployment Time: <t:{DeploymentTime}:D> @ <t:{DeploymentTime}:T>`)
-                end
-    
-                -- Yeah, this is hacky, what a price to pay for good formatting!
-                local PlatformEmoji = if Config.Discord.PlatformEmojis then
-                    if BinaryType == "WindowsPlayer" or BinaryType == "WindowsStudio64" and Config.Discord.PlatformEmojis.Windows then
-                        ` {Config.Discord.PlatformEmojis.Windows} `
-                    elseif BinaryType == "MacPlayer" or BinaryType == "MacStudio" and Config.Discord.PlatformEmojis.MacOs then
-                        ` {Config.Discord.PlatformEmojis.MacOs} `
-                    else
-                        ""
-                else
-                    ""
-
-                print(`[+] {DeploymentType} {BinaryType}@{channelName}\n    * Binary Hash: {VersionHash}\n    * Roblox Version: {RobloxVersion}\n    * Deployment Time: {LastModifiedHeader}`)
-
-                local EmbedObject = {
-                    title = `[{DeploymentType}]{PlatformEmoji}{BinaryType}@{channelName}`,
-                    description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
-                    url = ChannelPath .. "DeployHistory.txt",
-                    color = 0x518dc9,
-                }
-
-                -- Only for WindowsPlayer@LIVE
-                if channelName == "LIVE" and BinaryType == "WindowsPlayer" then
-                    EmbedObject.footer = {
-                        text = "⚠️ This version may not yet be \"active\", meaning most users shouldn't receive this update until later, which could take any amount of time. (Sometimes a few hours, or even up to a day!)"
-                    }
-
-                    -- And also..
-                    if Config.Discord.LiveUpdatePingRoleId then
-                        WebhookObject.content = `<@&{Config.Discord.LiveUpdatePingRoleId}>`
-                    end
-                end
-
-                table.insert(WebhookObject.embeds, EmbedObject)
-    
-                -- Now write new version info to file
-                local NewVersionInfoToWrite = VersionHash
-                if RobloxVersion then
-                    NewVersionInfoToWrite ..= "\n" .. RobloxVersion
-                end
-    
-                fs.writeFile(BinaryTypePath .. "Version.txt", NewVersionInfoToWrite)
             end
         end
+
+        -- The "diff" embedded in the Discord Webhook embed
+        local Diff = ConstructDiff(VersionHash, RobloxVersion, OldVersionHash, OldRobloxVersion)
+
+        -- Checking if this a new deployment, or a "revert"
+        local PastVersionsFile = SafeReadFile(BinaryTypePath .. "PastVersions.txt")
+        local PastVersions = if PastVersionsFile then string.split(PastVersionsFile, "\n") else {}
+
+        -- Used in the embed
+        local DeploymentType = if table.find(PastVersions, VersionHash) then "Revert" else "New"
+
+        -- Add the old version hash to PastVersions, and re-write to file
+        if OldVersionHash then
+            table.insert(PastVersions, OldVersionHash)
+            fs.writeFile(BinaryTypePath .. `PastVersions.txt`, table.concat(PastVersions, "\n"))
+        end
+
+        local BulletPoints = {`• Binary Hash: **\`{VersionHash}\`**`}
+        if RobloxVersion then
+            table.insert(BulletPoints, `• Roblox Version: **\`{RobloxVersion}\`**`)
+        end
+        if DeploymentTime then
+            table.insert(BulletPoints, `• Deployment Time: <t:{DeploymentTime}:D> @ <t:{DeploymentTime}:T>`)
+        end
+
+        -- Yeah, this is hacky, what a price to pay for good formatting!
+        local PlatformEmoji = if Config.Discord.PlatformEmojis then
+            if BinaryType == "WindowsPlayer" or BinaryType == "WindowsStudio64" and Config.Discord.PlatformEmojis.Windows then
+                ` {Config.Discord.PlatformEmojis.Windows} `
+            elseif BinaryType == "MacPlayer" or BinaryType == "MacStudio" and Config.Discord.PlatformEmojis.MacOs then
+                ` {Config.Discord.PlatformEmojis.MacOs} `
+            else
+                ""
+        else
+            ""
+
+        print(`[+] {DeploymentType} {BinaryType}@{channelName}\n    * Binary Hash: {VersionHash}\n    * Roblox Version: {RobloxVersion}\n    * Deployment Time: {LastModifiedHeader}`)
+
+        local EmbedObject = {
+            title = `[{DeploymentType}]{PlatformEmoji}{BinaryType}@{channelName}`,
+            description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
+            url = ChannelPath .. "DeployHistory.txt",
+            color = 0x518dc9,
+        }
+
+        -- Only for WindowsPlayer@LIVE
+        if channelName == "LIVE" and BinaryType == "WindowsPlayer" then
+            EmbedObject.footer = {
+                text = "⚠️ This version may not yet be \"active\", meaning most users shouldn't receive this update until later, which could take any amount of time. (Sometimes a few hours, or even up to a day!)"
+            }
+
+            -- And also..
+            if Config.Discord.LiveUpdatePingRoleId then
+                WebhookObject.content = `<@&{Config.Discord.LiveUpdatePingRoleId}>`
+            end
+        end
+
+        table.insert(WebhookObject.embeds, EmbedObject)
+
+        -- Now write new version info to file
+        local NewVersionInfoToWrite = VersionHash
+        if RobloxVersion then
+            NewVersionInfoToWrite ..= "\n" .. RobloxVersion
+        end
+
+        fs.writeFile(BinaryTypePath .. "Version.txt", NewVersionInfoToWrite)
     end
 
     -- Now, we'll finalize and post to the webhook, if applicable
@@ -297,17 +301,174 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
     end
 end
 
+-- For checking *specifically* LIVE, via parsing DeployHistory
+local function CheckLive(postToWebhook: boolean?)
+    postToWebhook = if postToWebhook == nil then true else postToWebhook
+
+    local WebhookObject: WebhookQueue.WebhookObject = {
+        embeds = {},
+    }
+
+    if Config.Discord.Username then
+        WebhookObject.username = Config.Discord.Username
+    end
+    if Config.Discord.AvatarUrl then
+        WebhookObject.avatar_url = Config.Discord.AvatarUrl
+    end
+
+    -- Now we'll handle each individual DeployHistory out; the "Windows" and "Mac" stuff are
+    -- just identifiers for the main body so we can reuse code <3
+    local Responses = {
+        {"Windows", "https://setup.rbxcdn.com/DeployHistory.txt"},
+        {"Mac", "https://setup.rbxcdn.com/mac/DeployHistory.txt"},
+    }
+
+    for _, ResponseTree in Responses do
+        local Platform: string = ResponseTree[1]
+        local Url: string = ResponseTree[2]
+
+        local Response: net.FetchResponse = net.request(Url)
+
+        if Response.statusCode ~= 200 then
+            continue
+        end
+
+        local Deployments = ParseDeployHistory(Response.body)
+        local CheckedBinaryTypes = setmetatable({}, {__mode = "k"})
+
+        -- Traverse the array in reverse
+        for ReverseIndex = #Deployments, 1, -1 do
+            local Deployment = Deployments[ReverseIndex]
+
+            -- Resolving the psuedo BinaryType for this is a mess lol
+            local BinaryType = if Platform == "Windows" then
+                if Deployment.BinaryType == "Studio64" then
+                    "WindowsStudio64"
+                elseif Deployment.BinaryType == "Studio" then
+                    "WindowsStudio"
+                else
+                    Deployment.BinaryType -- Just itself, if other than ones we manually want to re-bind
+            else -- Mac
+                if Deployment.BinaryType == "Client" then
+                    "MacPlayer"
+                elseif Deployment.BinaryType == "Studio" then
+                    "MacStudio"
+                else
+                    Deployment.BinaryType
+
+            -- For skipping new BinaryTypes we've already checked new versions for
+            if CheckedBinaryTypes[BinaryType] then
+                continue
+            end
+
+            CheckedBinaryTypes[BinaryType] = true
+
+            EnsureFileTree({
+                db = {
+                    LIVE = {
+                        [Platform] = {
+                            [BinaryType] = {},
+                        },
+                    },
+                },
+            })
+
+            -- It'll always be `LIVE`, so no need to check for anything else
+            local BinaryTypePath = `db/LIVE/{Platform}/{BinaryType}/`
+            local OldVersionFile = SafeReadFile(BinaryTypePath .. "Version.txt")
+
+            local OldVersionHash, OldRobloxVersion
+            if OldVersionFile then
+                local SplitOldVersionFile = string.split(OldVersionFile, "\n")
+
+                OldVersionHash = SplitOldVersionFile[1]
+                OldRobloxVersion = SplitOldVersionFile[2]
+            end
+
+            if OldVersionFile and Deployment.VersionHash == OldVersionHash then
+                continue
+            end
+
+            local Diff = ConstructDiff(Deployment.VersionHash, Deployment.RobloxVersion, OldVersionHash, OldRobloxVersion)
+
+            local PastVersionsFile = SafeReadFile(BinaryTypePath .. "PastVersions.txt")
+            local PastVersions = if PastVersionsFile then string.split(PastVersionsFile, "\n") else {}
+
+            local DeploymentType = if table.find(PastVersions, Deployment.VersionHash) then "Revert" else "New"
+
+            -- Add the old version hash to PastVersions, and re-write to file
+            if OldVersionHash then
+                table.insert(PastVersions, OldVersionHash)
+                fs.writeFile(BinaryTypePath .. `PastVersions.txt`, table.concat(PastVersions, "\n"))
+            end
+
+            local BulletPoints = {`• Binary Hash: **\`{Deployment.VersionHash}\`**`}
+            if Deployment.RobloxVersion then
+                table.insert(BulletPoints, `• Roblox Version: **\`{Deployment.RobloxVersion}\`**`)
+            end
+            if Deployment.Time.Timestamp then
+                table.insert(BulletPoints, `• Deployment Time: <t:{Deployment.Time.Timestamp}:D> @ <t:{Deployment.Time.Timestamp}:T>`)
+            end
+
+            local PlatformEmoji = if Config.Discord.PlatformEmojis then
+                if Platform == "Windows" then
+                    ` {Config.Discord.PlatformEmojis.Windows} `
+                else -- Mac
+                    ` {Config.Discord.PlatformEmojis.MacOs} `
+            else
+                ""
+
+        print(`[+] {DeploymentType} {BinaryType}@LIVE\n    * Binary Hash: {Deployment.VersionHash}\n    * Roblox Version: {Deployment.RobloxVersion}\n    * Deployment Time: {Deployment.Time.Formatted}`)
+
+        local EmbedObject = {
+            title = `[{DeploymentType}]{PlatformEmoji}{BinaryType}@LIVE`,
+            description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
+            url = Url,
+            color = 0x518dc9,
+        }
+
+        -- Only for WindowsPlayer
+        if BinaryType == "WindowsPlayer" then
+            EmbedObject.footer = {
+                text = "⚠️ This version may not yet be \"active\", meaning most users shouldn't receive this update until later, which could take any amount of time. (Sometimes a few hours, or even up to a day!)"
+            }
+
+            -- And we'll also optionally ping for it
+            if Config.Discord.LiveUpdatePingRoleId then
+                WebhookObject.content = `<@&{Config.Discord.LiveUpdatePingRoleId}>`
+            end
+        end
+
+        table.insert(WebhookObject.embeds, EmbedObject)
+
+        local NewVersionInfoToWrite = Deployment.VersionHash
+        if Deployment.RobloxVersion then
+            NewVersionInfoToWrite ..= "\n" .. Deployment.RobloxVersion
+        end
+
+        fs.writeFile(BinaryTypePath .. "Version.txt", NewVersionInfoToWrite)
+        end
+    end
+
+    if postToWebhook and #WebhookObject.embeds >= 1 then
+        -- Post to all `LIVE` webhooks
+        for _, WebhookUrl in Config.Discord.Webhooks.Live do
+            WebhookQueue.Add(WebhookUrl, WebhookObject)
+        end
+    end
+end
+
 -- Let's make sure to start the webhook queue listener thread first
 print("* Starting webhook queue listener..")
 WebhookQueue.Start()
 
 -- Before anything else, let's run through each channel to make sure we're
 -- caught up with the current 'state' of each channel
--- FYI, the 2nd `false` arg here tells CheckChannel to not post to any
+-- FYI, the `false` arg here tells CheckChannel to not post to any
 -- webhooks, soley for this
 print("* Checking initial state of each channel (this could take a min)")
 if Config.TrackLive then
-    CheckChannel("LIVE", false)
+    CheckLive(false)
 end
 
 local InitCheckThreads = {}
@@ -360,7 +521,11 @@ for _, ChannelGroup in ChannelGroups do
     task.spawn(function()
         while true do
             for _, ChannelName in ChannelGroup do
-                CheckChannel(ChannelName)
+                if ChannelName == "LIVE" then
+                    CheckLive()
+                else
+                    CheckChannel(ChannelName)
+                end
             end
             
             -- Wait the given interval at the end of the cycle..
