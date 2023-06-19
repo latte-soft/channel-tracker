@@ -19,6 +19,7 @@ export type Config = {
         },
         Webhooks: {
             Live: {string},
+            LivePre: {string},
             ZChannels: {string},
         },
     },
