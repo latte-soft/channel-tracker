@@ -279,7 +279,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
         -- Only for WindowsPlayer@LIVE
         if channelName == "LIVE" and BinaryType == "WindowsPlayer" then
             EmbedObject.footer = {
-                text = "⚠️ This version may not yet be \"active\", meaning most users shouldn't receive this update until later, which could take any amount of time. (Sometimes a few hours, or even up to a day!)"
+                text = "ℹ️ This deployment is now likely \"active\", meaning users should generally now be on this version."
             }
 
             -- And also..
@@ -309,7 +309,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
 end
 
 -- For checking *specifically* LIVE, via parsing DeployHistory
-local function CheckLive(postToWebhook: boolean?)
+local function CheckLivePre(postToWebhook: boolean?)
     postToWebhook = if postToWebhook == nil then true else postToWebhook
 
     local WebhookObject: WebhookQueue.WebhookObject = {
@@ -459,7 +459,7 @@ local function CheckLive(postToWebhook: boolean?)
 
     if postToWebhook and #WebhookObject.embeds >= 1 then
         -- Post to all `LIVE` webhooks
-        for _, WebhookUrl in Config.Discord.Webhooks.Live do
+        for _, WebhookUrl in Config.Discord.Webhooks.LivePre do
             WebhookQueue.Add(WebhookUrl, WebhookObject)
         end
     end
@@ -475,7 +475,8 @@ WebhookQueue.Start()
 -- webhooks, soley for this
 print("* Checking initial state of each channel (this could take a min)")
 if Config.TrackLive then
-    CheckLive(false)
+    CheckChannel("LIVE", false)
+    CheckLivePre(false)
 end
 
 local InitCheckThreads = {}
@@ -529,7 +530,8 @@ for _, ChannelGroup in ChannelGroups do
         while true do
             for _, ChannelName in ChannelGroup do
                 if ChannelName == "LIVE" then
-                    CheckLive()
+                    CheckChannel(ChannelName)
+                    CheckLivePre()
                 else
                     CheckChannel(ChannelName)
                 end
