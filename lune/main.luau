@@ -69,10 +69,17 @@ end
 
 -- Lol..
 local function GetLatestRobloxVersionForBinaryType(binaryType: string, deployHistoryData: string): string?
-    local RobloxVersionString = string.match(deployHistoryData, `{binaryType}.+file version: %d+, %d+, %d+, (%d+)[\0-\9\11-\255]*$`)
+    local Deployments = ParseDeployHistory(deployHistoryData)
 
-    if RobloxVersionString then
-        return ParseRobloxVersion(RobloxVersionString)
+    for ReverseIndex = #Deployments, 1, -1 do
+        local Deployment = Deployments[ReverseIndex]
+
+        if Deployment.BinaryType == binaryType then
+            local Ending = string.match(Deployment.RobloxVersion, "%d+$")
+            if Ending then
+                return ParseRobloxVersion(Ending)
+            end
+        end
     end
 
     -- :(
