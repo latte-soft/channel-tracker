@@ -12,7 +12,7 @@ local QueueTable = {}
 
 -- Start the running thread to listen to the queue
 local function Start(waitInterval: number?)
-    waitInterval = waitInterval or 4
+    waitInterval = waitInterval or 3
 
     if QueueIsRunning then -- Already running, must've been a mistake
         return
@@ -29,6 +29,8 @@ local function Start(waitInterval: number?)
 
             local WebhookUrl = WebhookEntry[1]
             local WebhookObject: WebhookObject = WebhookEntry[2]
+
+            local Encoded = serde.encode("json", WebhookObject)
         
             local DiscordResponse = net.request({
                 url = WebhookUrl,
@@ -36,9 +38,9 @@ local function Start(waitInterval: number?)
                 headers = {
                     ["Content-Type"] = "application/json",
                 },
-                body = serde.encode("json", WebhookObject)
+                body = Encoded
             })
-        
+
             assert(DiscordResponse.ok, `[!] Error in webhook request ({DiscordResponse.statusCode}): {DiscordResponse.body}`)
 
             -- Wait the interval now..

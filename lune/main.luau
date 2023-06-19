@@ -124,6 +124,22 @@ local function ConstructDiff(versionHash1: string, robloxVersion1: string?, vers
     return Diff
 end
 
+local function NewWebhookObject(): WebhookQueue.WebhookObject
+    -- For more code reuse!
+    local WebhookObject = {
+        embeds = {}
+    }
+
+    if Config.Discord.Username then
+        WebhookObject.username = Config.Discord.Username
+    end
+    if Config.Discord.AvatarUrl then
+        WebhookObject.avatar_url = Config.Discord.AvatarUrl
+    end
+
+    return WebhookObject
+end
+
 -- Used in worker threads individually
 local function CheckChannel(channelName: string, postToWebhook: boolean?)
     -- This is used in the inital run loop for each worker, so that we don't log any
@@ -140,17 +156,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
     local DbPath = `db/{channelName}/`
 
     -- We'll use this throughout each specific BinaryType check to add embeds etc
-    local WebhookObject: WebhookQueue.WebhookObject = {
-        embeds = {},
-    }
-
-    -- Optional Discord cfgs
-    if Config.Discord.Username then
-        WebhookObject.username = Config.Discord.Username
-    end
-    if Config.Discord.AvatarUrl then
-        WebhookObject.avatar_url = Config.Discord.AvatarUrl
-    end
+    local WebhookObjects: {WebhookQueue.WebhookObject} = {}
 
     -- This is structred in this way to be ordered..
     local Responses = {
@@ -269,6 +275,8 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
 
         print(`[+] {DeploymentType} {BinaryType}@{channelName}\n    * Binary Hash: {VersionHash}\n    * Roblox Version: {RobloxVersion}\n    * Deployment Time: {LastModifiedHeader}`)
 
+        local WebhookObject = NewWebhookObject()
+
         local EmbedObject = {
             title = `[{DeploymentType}]{PlatformEmoji}{BinaryType}@{channelName}`,
             description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
@@ -279,7 +287,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
         -- Only for WindowsPlayer@LIVE
         if channelName == "LIVE" and BinaryType == "WindowsPlayer" then
             EmbedObject.footer = {
-                text = "ℹ️ This deployment is now likely \"active\", meaning users should generally now be on this version."
+                text = "This deployment is now likely \"active\", meaning users should generally now be on this version."
             }
 
             -- And also..
@@ -288,7 +296,8 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
             end
         end
 
-        table.insert(WebhookObject.embeds, EmbedObject)
+        WebhookObject.embeds = {EmbedObject}
+        table.insert(WebhookObjects, WebhookObject)
 
         -- Now write new version info to file
         local NewVersionInfoToWrite = VersionHash
@@ -300,10 +309,12 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
     end
 
     -- Now, we'll finalize and post to the webhook, if applicable
-    if postToWebhook and #WebhookObject.embeds >= 1 then
-        local WebhookArray = if channelName == "LIVE" then Config.Discord.Webhooks.Live else Config.Discord.Webhooks.ZChannels
-        for _, WebhookUrl in WebhookArray do
-            WebhookQueue.Add(WebhookUrl, WebhookObject)
+    if postToWebhook and #WebhookObjects >= 1 then
+        for _, WebhookObject in WebhookObjects do
+            local WebhookArray = if channelName == "LIVE" then Config.Discord.Webhooks.Live else Config.Discord.Webhooks.ZChannels
+            for _, WebhookUrl in WebhookArray do
+                WebhookQueue.Add(WebhookUrl, WebhookObject)
+            end
         end
     end
 end
@@ -312,16 +323,7 @@ end
 local function CheckLivePre(postToWebhook: boolean?)
     postToWebhook = if postToWebhook == nil then true else postToWebhook
 
-    local WebhookObject: WebhookQueue.WebhookObject = {
-        embeds = {},
-    }
-
-    if Config.Discord.Username then
-        WebhookObject.username = Config.Discord.Username
-    end
-    if Config.Discord.AvatarUrl then
-        WebhookObject.avatar_url = Config.Discord.AvatarUrl
-    end
+    local WebhookObjects: {WebhookQueue.WebhookObject} = {}
 
     -- Now we'll handle each individual DeployHistory out; the "Windows" and "Mac" stuff are
     -- just identifiers for the main body so we can reuse code <3
@@ -341,11 +343,18 @@ local function CheckLivePre(postToWebhook: boolean?)
         end
 
         local Deployments = ParseDeployHistory(Response.body)
-        local CheckedBinaryTypes = setmetatable({}, {__mode = "k"})
+        local CheckedBinaryTypes = setmetatable({}, {__mode = "v"})
 
         -- Traverse the array in reverse
         for ReverseIndex = #Deployments, 1, -1 do
             local Deployment = Deployments[ReverseIndex]
+
+            -- For skipping new BinaryTypes we've already checked new versions for
+            if CheckedBinaryTypes[Deployment.BinaryType] then
+                continue
+            end
+
+            CheckedBinaryTypes[Deployment.BinaryType] = true
 
             -- Resolving the psuedo BinaryType for this is a mess lol
             local BinaryType = if Platform == "Windows" then
@@ -362,13 +371,6 @@ local function CheckLivePre(postToWebhook: boolean?)
                     "MacStudio"
                 else
                     Deployment.BinaryType
-
-            -- For skipping new BinaryTypes we've already checked new versions for
-            if CheckedBinaryTypes[BinaryType] then
-                continue
-            end
-
-            CheckedBinaryTypes[BinaryType] = true
 
             EnsureFileTree({
                 db = {
@@ -425,42 +427,47 @@ local function CheckLivePre(postToWebhook: boolean?)
             else
                 ""
 
-        print(`[+] {DeploymentType} {BinaryType}@LIVE\n    * Binary Hash: {Deployment.VersionHash}\n    * Roblox Version: {Deployment.RobloxVersion}\n    * Deployment Time: {Deployment.Time.Formatted}`)
+            print(`[+] {DeploymentType} {BinaryType}@LIVEPRE\n    * Binary Hash: {Deployment.VersionHash}\n    * Roblox Version: {Deployment.RobloxVersion}\n    * Deployment Time: {Deployment.Time.Formatted}`)
 
-        local EmbedObject = {
-            title = `[{DeploymentType}]{PlatformEmoji}{BinaryType}@LIVE`,
-            description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
-            url = Url,
-            color = 0x518dc9,
-        }
+            local WebhookObject = NewWebhookObject()
 
-        -- Only for WindowsPlayer
-        if BinaryType == "WindowsPlayer" then
-            EmbedObject.footer = {
-                text = "⚠️ This version may not yet be \"active\", meaning users shouldn't receive this update until later, which could take any amount of time. Occasionally, this deployment may not even be used due to issues internally!"
+            local EmbedObject = {
+                title = `[{DeploymentType}]{PlatformEmoji}{BinaryType}@LIVE`,
+                description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
+                url = Url,
+                color = 0x518dc9,
             }
 
-            -- And we'll also optionally ping for it
-            if Config.Discord.LiveUpdatePingRoleId then
-                WebhookObject.content = `<@&{Config.Discord.LiveUpdatePingRoleId}>`
+            -- Only for WindowsPlayer
+            if BinaryType == "WindowsPlayer" then 
+                EmbedObject.footer = {
+                    text = "⚠️ This version may not yet be \"active\", meaning users shouldn't receive this update until later, which could take any amount of time. Occasionally, this deployment may not even be used due to issues internally!"
+                }
+
+                -- And we'll also optionally ping for it
+                if Config.Discord.LiveUpdatePingRoleId then
+                    WebhookObject.content = `<@&{Config.Discord.LiveUpdatePingRoleId}>`
+                end
             end
-        end
 
-        table.insert(WebhookObject.embeds, EmbedObject)
+            WebhookObject.embeds = {EmbedObject}
+            table.insert(WebhookObjects, WebhookObject)
 
-        local NewVersionInfoToWrite = Deployment.VersionHash
-        if Deployment.RobloxVersion then
-            NewVersionInfoToWrite ..= "\n" .. Deployment.RobloxVersion
-        end
+            local NewVersionInfoToWrite = Deployment.VersionHash
+            if Deployment.RobloxVersion then
+                NewVersionInfoToWrite ..= "\n" .. Deployment.RobloxVersion
+            end
 
-        fs.writeFile(BinaryTypePath .. "Version.txt", NewVersionInfoToWrite)
+            fs.writeFile(BinaryTypePath .. "Version.txt", NewVersionInfoToWrite)
         end
     end
 
-    if postToWebhook and #WebhookObject.embeds >= 1 then
-        -- Post to all `LIVE` webhooks
-        for _, WebhookUrl in Config.Discord.Webhooks.LivePre do
-            WebhookQueue.Add(WebhookUrl, WebhookObject)
+    if postToWebhook and #WebhookObjects >= 1 then
+        for _, WebhookObject in WebhookObjects do
+            -- Post to all `LIVEPRE` webhooks
+            for _, WebhookUrl in Config.Discord.Webhooks.LivePre do
+                WebhookQueue.Add(WebhookUrl, WebhookObject)
+            end
         end
     end
 end
