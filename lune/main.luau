@@ -372,7 +372,7 @@ local function CheckLivePre(postToWebhook: boolean?)
 
             EnsureFileTree({
                 db = {
-                    LIVE = {
+                    LIVEPRE = {
                         [Platform] = {
                             [BinaryType] = {},
                         },
@@ -381,7 +381,7 @@ local function CheckLivePre(postToWebhook: boolean?)
             })
 
             -- It'll always be `LIVE`, so no need to check for anything else
-            local BinaryTypePath = `db/LIVE/{Platform}/{BinaryType}/`
+            local BinaryTypePath = `db/LIVEPRE/{Platform}/{BinaryType}/`
             local OldVersionFile = SafeReadFile(BinaryTypePath .. "Version.txt")
 
             local OldVersionHash, OldRobloxVersion
