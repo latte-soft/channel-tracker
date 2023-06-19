@@ -131,12 +131,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
     -- the bot just "catching up" to the current 'state' of the channel
     postToWebhook = if postToWebhook == nil then true else postToWebhook
 
-    -- "LIVE" is a pseudo identifier for production; top level dir on setup.rbxcdn
-    local ChannelPath = if channelName == "LIVE" then
-        "https://setup.rbxcdn.com/"
-    else
-        `https://setup.rbxcdn.com/channel/{channelName}/`
-
+    local ChannelPath = `https://setup.rbxcdn.com/channel/{channelName}/`
     local DbPath = `db/{channelName}/`
 
     -- We'll use this throughout each specific BinaryType check to add embeds etc
@@ -276,18 +271,6 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
             color = 0x518dc9,
         }
 
-        -- Only for WindowsPlayer@LIVE
-        if channelName == "LIVE" and BinaryType == "WindowsPlayer" then
-            EmbedObject.footer = {
-                text = "⚠️ This version may not yet be \"active\", meaning most users shouldn't receive this update until later, which could take any amount of time. (Sometimes a few hours, or even up to a day!)"
-            }
-
-            -- And also..
-            if Config.Discord.LiveUpdatePingRoleId then
-                WebhookObject.content = `<@&{Config.Discord.LiveUpdatePingRoleId}>`
-            end
-        end
-
         table.insert(WebhookObject.embeds, EmbedObject)
 
         -- Now write new version info to file
@@ -301,8 +284,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
 
     -- Now, we'll finalize and post to the webhook, if applicable
     if postToWebhook and #WebhookObject.embeds >= 1 then
-        local WebhookArray = if channelName == "LIVE" then Config.Discord.Webhooks.Live else Config.Discord.Webhooks.ZChannels
-        for _, WebhookUrl in WebhookArray do
+        for _, WebhookUrl in Config.Discord.Webhooks.ZChannels do
             WebhookQueue.Add(WebhookUrl, WebhookObject)
         end
     end
