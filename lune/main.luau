@@ -419,7 +419,7 @@ local function CheckLive(postToWebhook: boolean?)
         -- Only for WindowsPlayer
         if BinaryType == "WindowsPlayer" then
             EmbedObject.footer = {
-                text = "⚠️ This version may not yet be \"active\", meaning most users shouldn't receive this update until later, which could take any amount of time. (Sometimes a few hours, or even up to a day!)"
+                text = "⚠️ This version may not yet be \"active\", meaning users shouldn't receive this update until later, which could take any amount of time. Occasionally, this deployment may not even be used due to issues internally!"
             }
 
             -- And we'll also optionally ping for it
