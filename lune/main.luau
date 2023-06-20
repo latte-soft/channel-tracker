@@ -535,13 +535,20 @@ end
 for _, ChannelGroup in ChannelGroups do
     task.spawn(function()
         while true do
-            for _, ChannelName in ChannelGroup do
-                if ChannelName == "LIVE" then
-                    CheckChannel(ChannelName)
-                    CheckLivePre()
-                else
-                    CheckChannel(ChannelName)
+            -- my laziness ensues (well, need to dbg so :shrug:)
+            local _, Error = pcall(function()
+                for _, ChannelName in ChannelGroup do
+                    if ChannelName == "LIVE" then
+                        CheckChannel(ChannelName)
+                        CheckLivePre()
+                    else
+                        CheckChannel(ChannelName)
+                    end
                 end
+            end)
+
+            if Error then
+                print(`[!] Unexpected error during process: {Error}`)
             end
             
             -- Wait the given interval at the end of the cycle..
