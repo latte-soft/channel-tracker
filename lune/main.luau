@@ -528,22 +528,28 @@ end
 -- Give LIVE its own thread, if it is to be tracked
 print("(Giving LIVE its own worker)")
 if Config.TrackLive then
+    -- For normal active ver check
     table.insert(ChannelGroups, {"LIVE"})
+
+    task.spawn(function()
+        while true do
+            local _, Error = pcall(CheckLivePre)
+            if Error then
+                print(`[!] Unexpected error making DeployHistory request: {Error}`)
+            end
+
+            task.wait(Config.Workers.CheckIntervalLive)
+        end
+    end)
 end
 
 -- Finally, create running threads per channel group! <3
 for _, ChannelGroup in ChannelGroups do
     task.spawn(function()
         while true do
-            -- my laziness ensues (well, need to dbg so :shrug:)
             local _, Error = pcall(function()
                 for _, ChannelName in ChannelGroup do
-                    if ChannelName == "LIVE" then
-                        CheckChannel(ChannelName)
-                        CheckLivePre()
-                    else
-                        CheckChannel(ChannelName)
-                    end
+                    CheckChannel(ChannelName)
                 end
             end)
 

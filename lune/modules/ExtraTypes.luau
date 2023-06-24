@@ -4,6 +4,7 @@ export type Config = {
     Workers: {
         Amount: number,
         CheckInterval: number,
+        CheckIntervalLive: number,
     },
     CheckIntervals: {
         Versions: number,
