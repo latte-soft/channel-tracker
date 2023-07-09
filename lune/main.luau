@@ -173,7 +173,7 @@ local function SerializePastVersions(pastVersions: {ExtraTypes.PastVersion}): st
     for _, PastVersion in pastVersions do
         local Entry = PastVersion.VersionHash
         if PastVersion.RobloxVersion then
-            Entry ..= " " + PastVersion.RobloxVersion
+            Entry ..= " " .. PastVersion.RobloxVersion
         end
 
         table.insert(Entries, Entry)
@@ -610,8 +610,8 @@ if Config.TrackLive then
 
     task.spawn(function()
         while true do
-            local _, Error = pcall(CheckLivePre)
-            if Error then
+            local Success, Error = pcall(CheckLivePre)
+            if not Success then
                 print(`[!] Unexpected error making DeployHistory request: {Error}`)
             end
 
