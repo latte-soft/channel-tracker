@@ -28,4 +28,9 @@ export type Config = {
     ZChannels: {string},
 }
 
+export type PastVersion = {
+    VersionHash: string,
+    RobloxVersion: string?,
+}
+
 return nil
