@@ -25,11 +25,12 @@ local serde = require("@lune/serde")
 
 local ExtraTypes = require("modules/ExtraTypes")
 
+local WebhookQueue = require("modules/WebhookQueue")
+local PastVersions = require("modules/PastVersions")
 local ParseArgs = require("modules/ParseArgs")
 local EnsureFileTree = require("modules/EnsureFileTree")
-local WebhookQueue = require("modules/WebhookQueue")
-local GetTimestampFromLastModified = require("modules/GetTimestampFromLastModified")
 local ParseDeployHistory = require("modules/ParseDeployHistory")
+local GetTimestampFromLastModified = require("modules/GetTimestampFromLastModified")
 
 -- Input args
 local Args = ParseArgs(process.args, {
@@ -149,39 +150,6 @@ local function VersionIsLess(newVersion: string, oldVersion: string): boolean
     return false
 end
 
-local function ParsePastVersions(pastVersionsFile: string?): {ExtraTypes.PastVersion}
-    if not pastVersionsFile then
-        return {}
-    end
-
-    local PastVersions = {}
-
-    for VersionHash, RobloxVersion in string.gmatch(pastVersionsFile, "(version%-[%l%d]+) ?([%d%.]*)\n?") do
-        -- `RobloxVersion` CAN be nil.. We are intentionally, potentially setting this as nil
-        table.insert(PastVersions, {
-            VersionHash = VersionHash,
-            RobloxVersion = RobloxVersion,
-        })
-    end
-
-    return PastVersions
-end
-
-local function SerializePastVersions(pastVersions: {ExtraTypes.PastVersion}): string
-    local Entries: {string} = {}
-
-    for _, PastVersion in pastVersions do
-        local Entry = PastVersion.VersionHash
-        if PastVersion.RobloxVersion then
-            Entry ..= " " .. PastVersion.RobloxVersion
-        end
-
-        table.insert(Entries, Entry)
-    end
-
-    return table.concat(Entries, "\n")
-end
-
 local function NewWebhookObject(): WebhookQueue.WebhookObject
     -- For more code reuse!
     local WebhookObject = {
@@ -263,7 +231,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
 
         -- Also for checking if this a new deployment, or a "revert" later
         local PastVersionsFile = SafeReadFile(BinaryTypePath .. "PastVersions.txt")
-        local PastVersions = ParsePastVersions(PastVersionsFile)
+        local PastVersions = PastVersions.Parse(PastVersionsFile)
 
         -- Can be changed by our iter in a min
         local IsPastVersion = false
@@ -291,7 +259,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                 RobloxVersion = OldRobloxVersion,
             })
 
-            fs.writeFile(BinaryTypePath .. `PastVersions.txt`, SerializePastVersions(PastVersions))
+            fs.writeFile(BinaryTypePath .. `PastVersions.txt`, PastVersions.Serialize(PastVersions))
         end
 
         -- If still not in a past logged version..
