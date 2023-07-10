@@ -60,15 +60,16 @@ end
 -- Keep in mind, this ONLY works with WindowsPlayer, MacPlayer, and MacStudio
 -- BinaryTypes; not WindowsStudio64. (Example input: "5750427"; `575, 427`)
 local function ParseRobloxVersion(version: string): string?
-    -- We have no accurate way to get the major version without expecting 3
-    -- hardcoded numbers, as there's no seperator between it and the patch ver.
-    -- The patch number can be lead by any number of zeros after major
+    -- We have no accurate way to get the major version without expecting 3 hardcoded
+    -- numbers, as there's no definite seperator (as there is a possibility for no
+    -- zeroes at all) between it and the patch ver. The patch number can be lead by
+    -- any number of zeros after major ver
     local Major, Patch = string.match(version, "(%d%d%d)0*(%d*)")
 
     if not Major then
         return
     elseif Patch == "" then
-        Patch = "0" -- fallback
+        Patch = "0" -- Fallback, if the patch ver is literally set to `0` for some reason
     end
 
     return `{Major}.{Patch}`
