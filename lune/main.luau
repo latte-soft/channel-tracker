@@ -368,8 +368,8 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
     end
 end
 
--- For checking *specifically* LIVE, via parsing DeployHistory
-local function CheckLivePre(postToWebhook: boolean?)
+-- For checking *specifically* LIVE "pre-active" deployments, via parsing DeployHistory
+local function CheckLivePreActive(postToWebhook: boolean?)
     postToWebhook = if postToWebhook == nil then true else postToWebhook
 
     local WebhookObjects: {WebhookQueue.WebhookObject} = {}
@@ -531,7 +531,7 @@ WebhookQueue.Start()
 print("* Checking initial state of each channel (this could take a min)")
 if Config.TrackLive then
     CheckChannel("LIVE", false)
-    CheckLivePre(false)
+    CheckLivePreActive(false)
 end
 
 local InitCheckThreads = {}
@@ -581,9 +581,9 @@ if Config.TrackLive then
 
     task.spawn(function()
         while true do
-            local Success, Error = pcall(CheckLivePre)
+            local Success, Error = pcall(CheckLivePreActive)
             if not Success then
-                print(`[!] Unexpected error making DeployHistory request: {Error}`)
+                print(`[!] Unexpected error with DeployHistory (CheckLivePreActive) process: {Error}`)
             end
 
             task.wait(Config.Workers.CheckIntervalLive)
