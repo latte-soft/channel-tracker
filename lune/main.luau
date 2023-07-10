@@ -316,9 +316,9 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
             elseif BinaryType == "MacPlayer" or BinaryType == "MacStudio" and Config.Discord.PlatformEmojis.MacOs then
                 ` {Config.Discord.PlatformEmojis.MacOs} `
             else
-                ""
+                " "
         else
-            ""
+            " "
 
         -- The "diff" embedded in the Discord Webhook embed
         local Diff = ConstructDiff(VersionHash, RobloxVersion, OldVersionHash, OldRobloxVersion)
@@ -470,9 +470,9 @@ local function CheckLivePreActive(postToWebhook: boolean?)
                 elseif Platform == "Mac" then
                     ` {Config.Discord.PlatformEmojis.MacOs} `
                 else
-                    ""
+                    " "
             else
-                ""
+                " "
 
             local Diff = ConstructDiff(Deployment.VersionHash, Deployment.RobloxVersion, OldVersionHash, OldRobloxVersion)
 
