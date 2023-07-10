@@ -15,4 +15,4 @@ end
 ]]
 
 print(Parsed)
-fs.writeFile("Windows-LIVE.lua", serde.encode("json", Parsed))
+fs.writeFile("Windows-LIVE.json", serde.encode("json", Parsed))
