@@ -467,8 +467,10 @@ local function CheckLivePre(postToWebhook: boolean?)
             local PlatformEmoji = if Config.Discord.PlatformEmojis then
                 if Platform == "Windows" then
                     ` {Config.Discord.PlatformEmojis.Windows} `
-                else -- Mac
+                elseif Platform == "Mac" then
                     ` {Config.Discord.PlatformEmojis.MacOs} `
+                else
+                    ""
             else
                 ""
 
