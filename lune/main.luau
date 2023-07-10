@@ -26,7 +26,7 @@ local serde = require("@lune/serde")
 local ExtraTypes = require("modules/ExtraTypes")
 
 local WebhookQueue = require("modules/WebhookQueue")
-local PastVersions = require("modules/PastVersions")
+local PastVersionsUtils = require("modules/PastVersionsUtils")
 local ParseArgs = require("modules/ParseArgs")
 local EnsureFileTree = require("modules/EnsureFileTree")
 local ParseDeployHistory = require("modules/ParseDeployHistory")
@@ -232,7 +232,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
 
         -- Also for checking if this a new deployment, or a "revert" later
         local PastVersionsFile = SafeReadFile(BinaryTypePath .. "PastVersions.txt")
-        local PastVersions = PastVersions.Parse(PastVersionsFile)
+        local PastVersions = PastVersionsUtils.Parse(PastVersionsFile)
 
         -- Can be changed by our iter in a min
         local IsPastVersion = false
@@ -260,7 +260,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
                 RobloxVersion = OldRobloxVersion,
             })
 
-            fs.writeFile(BinaryTypePath .. `PastVersions.txt`, PastVersions.Serialize(PastVersions))
+            fs.writeFile(BinaryTypePath .. `PastVersions.txt`, PastVersionsUtils.Serialize(PastVersions))
         end
 
         -- If still not in a past logged version..
