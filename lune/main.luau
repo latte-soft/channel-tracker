@@ -480,7 +480,7 @@ local function CheckLivePreActive(postToWebhook: boolean?)
 
             local WebhookObject = NewWebhookObject()
             local EmbedObject = {
-                title = `[{Deployment.DeployType}]{PlatformEmoji}{BinaryType}@LIVE`,
+                title = `[{Deployment.DeployType}]{PlatformEmoji}{BinaryType}@LIVE (PRE-ACTIVE)`,
                 description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
                 url = Url,
                 color = 0x518dc9,
