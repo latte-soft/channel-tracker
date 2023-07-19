@@ -15,13 +15,13 @@ git clone https://github.com/latte-soft/channel-tracker.git
 * Install [`filiptibell/lune`](https://github.com/filiptibell/lune) automatically via [Aftman](https://github.com/LPGhatguy/aftman)
 
 ```sh
-$ aftman install
+aftman install
 ```
 
 * [Add a `config.json` file](#configjson-file-template), and just run!
 
 ```sh
-$ lune main
+lune main
 ```
 
 <sup><i>Just a heads up, you can run "lune main config-file:path/to/config/file" to specify another path to your config file, as the default is just "config.json"</i></sup>
