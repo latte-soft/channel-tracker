@@ -329,7 +329,11 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
         local EmbedObject = {
             title = `[{DeploymentType}]{PlatformEmoji}{BinaryType}@{channelName}`,
             description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
-            url = ChannelPath .. "DeployHistory.txt",
+            url = ChannelPath ..
+                if BinaryType == "MacPlayer" or BinaryType == "MacStudio" then
+                    "mac/DeployHistory.txt"
+                else -- WindowsPlayer/WindowsStudio64
+                    "DeployHistory.txt",
             color = 0x518dc9,
         }
 
