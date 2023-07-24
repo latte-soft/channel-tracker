@@ -56,7 +56,7 @@ local function ParseDeployHistory(deployHistoryData: string): {Deployment}
                 sec = Second,
             })
 
-            Timestamp += 60 * 60 * 4 -- Match to GMT+0
+            Timestamp += 60 * 60 * 5 -- Match to GMT+0 (Because it's originally GMT-5; deployed from New York)
             Deployment.Time.Timestamp = Timestamp
 
             -- Matching the `Last-Modified` header format: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified
