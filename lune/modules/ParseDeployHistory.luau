@@ -45,7 +45,7 @@ local function ParseDeployHistory(deployHistoryData: string): {Deployment}
             Hour = if Meridiem == "AM" then Hour else Hour + 12
 
             -- Convert to timestamp, then increase by 4 hours, as to our knowledge, LIVE's
-            -- DeployHistory is always in GMT-4, EDT
+            -- DeployHistory is always in GMT-5, EST
             local Timestamp = os.time({
                 month = Month,
                 day = Day,
