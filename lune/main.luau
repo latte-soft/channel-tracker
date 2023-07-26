@@ -178,7 +178,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
     local ChannelPath = if channelName == "LIVE" then
         "https://setup.rbxcdn.com/"
     else
-        `https://setup.rbxcdn.com/channel/{channelName}/`
+        `https://setup.rbxcdn.com/channel/{string.lower(channelName)}/`
 
     local DbPath = `db/{channelName}/`
 
