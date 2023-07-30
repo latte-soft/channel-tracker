@@ -329,11 +329,10 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
         local EmbedObject = {
             title = `[{DeploymentType}]{PlatformEmoji}{BinaryType}@{channelName}`,
             description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
-            url = ChannelPath ..
-                if BinaryType == "MacPlayer" or BinaryType == "MacStudio" then
-                    "mac/DeployHistory.txt"
-                else -- WindowsPlayer/WindowsStudio64
-                    "DeployHistory.txt",
+            url = `https://rdd.latte.to/?channel={channelName}&?version={VersionHash}` ..
+                if BinaryType == "MacPlayer" or "MacStudio" then
+                    "&blobDir=mac"
+                else "",
             color = 0x518dc9,
         }
 
@@ -486,7 +485,10 @@ local function CheckLivePreActive(postToWebhook: boolean?)
             local EmbedObject = {
                 title = `[{Deployment.DeployType}]{PlatformEmoji}{BinaryType}@LIVE (PRE-ACTIVE)`,
                 description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
-                url = Url,
+                url = `https://rdd.latte.to/?version={Deployment.VersionHash}` ..
+                    if BinaryType == "MacPlayer" or "MacStudio" then
+                        "&blobDir=mac"
+                    else "",
                 color = 0x518dc9,
             }
 
