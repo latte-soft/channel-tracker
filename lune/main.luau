@@ -486,7 +486,7 @@ local function CheckLivePreActive(postToWebhook: boolean?)
                 title = `[{Deployment.DeployType}]{PlatformEmoji}{BinaryType}@LIVE (PRE-ACTIVE)`,
                 description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
                 url = `https://rdd.latte.to/?version={Deployment.VersionHash}` ..
-                    if BinaryType == "MacPlayer" or "MacStudio" then
+                    if BinaryType == "MacPlayer" or BinaryType == "MacStudio" then
                         "&blobDir=mac"
                     else "",
                 color = 0x518dc9,
