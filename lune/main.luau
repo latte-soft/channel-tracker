@@ -330,7 +330,7 @@ local function CheckChannel(channelName: string, postToWebhook: boolean?)
             title = `[{DeploymentType}]{PlatformEmoji}{BinaryType}@{channelName}`,
             description = table.concat(BulletPoints, "\n") .. "\n```diff\n" .. Diff .. "\n```",
             url = `https://rdd.latte.to/?channel={channelName}&version={VersionHash}` ..
-                if BinaryType == "MacPlayer" or "MacStudio" then
+                if BinaryType == "MacPlayer" or BinaryType == "MacStudio" then
                     "&blobDir=mac"
                 else "",
             color = 0x518dc9,
