@@ -32,6 +32,8 @@ local EnsureFileTree = require("modules/EnsureFileTree")
 local ParseDeployHistory = require("modules/ParseDeployHistory")
 local GetTimestampFromLastModified = require("modules/GetTimestampFromLastModified")
 
+print(`(Start Time: {os.date("%a, %d %b %Y %H:%M:%S UTC")})`)
+
 -- Input args
 local Args = ParseArgs(process.args, {
     ["config-file"] = "config.json",
@@ -519,8 +521,6 @@ local function CheckLivePreActive(postToWebhook: boolean?)
         end
     end
 end
-
-print(`(Start Time: {os.date("%a, %d %b %Y %H:%M:%S UTC")}`)
 
 -- Let's make sure to start the webhook queue listener thread first
 print("* Starting webhook queue listener..")
