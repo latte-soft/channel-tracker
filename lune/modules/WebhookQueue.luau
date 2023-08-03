@@ -42,6 +42,7 @@ local function Start(waitInterval: number?)
             })
 
             assert(DiscordResponse.ok, `[!] Error in webhook request ({DiscordResponse.statusCode}): {DiscordResponse.body}`)
+            print(`[*] Discord Response ({DiscordResponse.statusCode}): {DiscordResponse.body}`)
 
             -- Wait the interval now..
             task.wait(waitInterval)
