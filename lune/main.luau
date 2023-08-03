@@ -520,6 +520,8 @@ local function CheckLivePreActive(postToWebhook: boolean?)
     end
 end
 
+print(`(Start Time: {os.date("%a, %d %b %Y %H:%M:%S UTC")}`)
+
 -- Let's make sure to start the webhook queue listener thread first
 print("* Starting webhook queue listener..")
 WebhookQueue.Start()
