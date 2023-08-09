@@ -1,8 +1,16 @@
+## ⚠️ Notice of Archival
+
+This repository has been archived due to recent changes by Roblox's build-team with files on S3 per channel (`/version`, `/versionQTStudio`, `/mac/version`, and `/mac/versionStudio`) no longer being updated for alternate channels (e.g. `zcanary`, `zintegration` etc), making this version of our tracker near-useless outside of tracking [`LIVE`](https://setup.rbxcdn.com/DeployHistory.txt) (production).
+
+We're still hosting a **proprietary** version of this tracker in the [Latte Softworks Discord Server](https://latte.to/discord), and this repository is to serve as display for what was once possible to track!
+
+___
+
 # Roblox Channel Tracker
 
 A basic Roblox channel deployment tracker that utilizes [Discord Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) for notifying changes.
 
-*This tracker is also hosted officially in the [Latte Softworks Discord Server](https://latte.to) :)*
+*This tracker is also hosted officially in the [Latte Softworks Discord Server](https://latte.to/discord) :)*
 
 ## Setup
 
