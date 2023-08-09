@@ -1,4 +1,4 @@
--- GPLv3 | Copyright (C) 2023 Latte Softworks <latte.to>
+-- MIT License | Copyright (C) 2023 Latte Softworks <https://latte.to>
 
 -- Month "bindings" for os.time input
 local MonthBindings: {[string]: number} = {
